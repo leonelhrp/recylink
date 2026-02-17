@@ -1,96 +1,305 @@
 # EventBoard
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+> **Modalidad elegida: Opción A — Desarrollar el proyecto propuesto**
+>
+> Todos los deseables fueron implementados: GraphQL, JWT, Docker, Micro-frontend, Testing avanzado, CI/CD.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+Aplicación full-stack para gestionar eventos internos de un equipo. Construida como un monorepo Nx con NestJS (REST + GraphQL), React (Module Federation con Rspack), MongoDB, Docker y CI/CD.
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## Arquitectura
 
-## Run tasks
-
-To run tasks with Nx use:
-
-```sh
-npx nx <target> <project-name>
+```
+event-board/
+├── apps/
+│   ├── api/                  # NestJS Backend (REST + GraphQL + JWT Auth)
+│   ├── api-e2e/              # E2E tests (mongodb-memory-server + Supertest)
+│   ├── web-host/             # React Host (Module Federation Shell)
+│   └── webEvents/            # React Remote (Events micro-frontend)
+├── libs/
+│   └── shared-types/         # Interfaces, enums y DTOs compartidos
+├── docker-compose.yml        # Orquestación Docker full-stack
+├── Dockerfile.web            # Multi-stage build para frontend
+├── nginx.conf                # Nginx config para SPA + API proxy
+├── .github/workflows/ci.yml  # Pipeline CI/CD
+└── TECHNICAL_DECISIONS.md    # Justificación de decisiones técnicas
 ```
 
-For example:
+### Diagrama de Arquitectura
 
-```sh
-npx nx build myproject
+```
+┌──────────────────────────────────────────────────────────┐
+│                       Nx Monorepo                         │
+│                                                           │
+│  ┌─────────────┐   Module    ┌───────────────┐           │
+│  │  web-host   │◄═══════════►│  webEvents    │           │
+│  │  (React     │  Federation │  (React       │           │
+│  │   Shell)    │             │   Remote)     │           │
+│  │  Port 4200  │             │  Port 4201    │           │
+│  └──────┬──────┘             └───────┬───────┘           │
+│         │          REST / GQL        │                    │
+│         └────────────┬───────────────┘                    │
+│                      ▼                                    │
+│              ┌───────────────┐    ┌───────────────────┐   │
+│              │     api       │    │  libs/shared-types │   │
+│              │  (NestJS)     │◄───│  Enums, Interfaces │   │
+│              │  REST+GraphQL │    │  DTOs              │   │
+│              │  Port 3000    │    └───────────────────┘   │
+│              └───────┬───────┘                            │
+└──────────────────────┼────────────────────────────────────┘
+                       │
+                  ┌────▼─────┐
+                  │ MongoDB  │
+                  │ Port     │
+                  │ 27017    │
+                  └──────────┘
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Stack Tecnológico
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Backend
+| Tecnología | Propósito |
+|---|---|
+| **NestJS** | Framework backend con inyección de dependencias y arquitectura modular |
+| **MongoDB + Mongoose** | Base de datos documental con ODM |
+| **Apollo Server** | Endpoint GraphQL (code-first) |
+| **JWT (`@nestjs/jwt`)** | Autenticación con guards globales para REST y GraphQL |
+| **class-validator** | Validación de DTOs con decoradores |
+| **bcrypt** | Hashing seguro de contraseñas |
 
-## Add new projects
+### Frontend
+| Tecnología | Propósito |
+|---|---|
+| **React 19** | Framework UI con TypeScript |
+| **Module Federation (Rspack)** | Arquitectura micro-frontend vía Nx |
+| **shadcn/ui + Radix UI** | Componentes accesibles (DatePicker, Select, Textarea, Button, Input, Badge) |
+| **TanStack Query** | Data fetching, caché, estados de carga/error |
+| **React Hook Form + Zod v4** | Formularios con validación schema-first |
+| **Tailwind CSS v4** | CSS utilitario con variables CSS para theming |
+| **Lucide React** | Iconografía consistente |
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+### Infraestructura
+| Tecnología | Propósito |
+|---|---|
+| **Nx** | Monorepo con task caching y comandos `affected` |
+| **Docker + Docker Compose** | Despliegue containerizado (MongoDB + API + Web + Nginx) |
+| **GitHub Actions** | CI/CD: lint, test (con coverage), build, e2e |
+| **Husky + commitlint** | Git hooks: lint-staged en pre-commit, validación Conventional Commits en commit-msg |
 
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
+## Inicio Rápido
+
+### Prerrequisitos
+- Node.js 20+
+- npm 9+
+- MongoDB 7+ (local o Docker)
+
+### Instalación
+
+```bash
+git clone <repo-url>
+cd event-board
+npm install
 ```
 
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+### Variables de Entorno
 
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
+Crear `apps/api/.env` (ver `apps/api/.env.example`):
 
-# Generate a library
-npx nx g @nx/react:lib some-lib
+| Variable | Default | Descripción |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://localhost:27017/event-board` | Conexión MongoDB |
+| `JWT_SECRET` | `event-board-secret` | Secreto para firmar JWT |
+| `JWT_EXPIRES_IN` | `1h` | Expiración del token |
+| `PORT` | `3000` | Puerto del API |
+| `CORS_ORIGIN` | `http://localhost:4200` | Orígenes CORS permitidos |
+
+### Ejecución Local (sin Docker)
+
+```bash
+# 1. Iniciar MongoDB
+mongod
+
+# 2. Iniciar el API (puerto 3000)
+npx nx serve api
+
+# 3. Iniciar el Frontend (puerto 4200, auto-inicia webEvents en 4201)
+npx nx serve web-host
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+- Frontend: http://localhost:4200
+- API REST: http://localhost:3000/api
+- GraphQL Playground: http://localhost:3000/graphql
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+### Ejecución con Docker
 
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
+```bash
+docker-compose up --build
 ```
 
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
+Inicia MongoDB, API (puerto 3000) y Web (puerto 80 con nginx).
 
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## API
 
-### Step 2
+### Endpoints REST
 
-Use the following command to configure a CI workflow for your workspace:
+| Método | Ruta | Auth | Descripción |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Pública | Registrar usuario |
+| `POST` | `/api/auth/login` | Pública | Login, retorna JWT |
+| `GET` | `/api/events` | Pública | Listar eventos con filtros |
+| `GET` | `/api/events/:id` | Pública | Detalle de evento |
+| `POST` | `/api/events` | JWT | Crear evento |
+| `PATCH` | `/api/events/:id` | JWT | Actualizar evento |
+| `DELETE` | `/api/events/:id` | JWT | Eliminar evento |
 
-```sh
-npx nx g ci-workflow
+**Filtros para GET /api/events:**
+- `category` — workshop, meetup, talk, social
+- `status` — draft, confirmed, cancelled
+- `startDate` / `endDate` — Rango de fechas
+- `search` — Búsqueda en título, descripción, organizador
+
+### API GraphQL
+
+Disponible en `/graphql`:
+
+```graphql
+# Listar eventos con filtros
+query {
+  events(filter: { category: WORKSHOP, status: CONFIRMED }) {
+    _id, title, description, date, location, category, organizer, status
+  }
+}
+
+# Detalle de evento
+query {
+  event(id: "...") { _id, title, description }
+}
+
+# Crear evento (requiere JWT en header Authorization)
+mutation {
+  createEvent(input: {
+    title: "Team Workshop"
+    description: "A hands-on workshop"
+    date: "2026-03-15T10:00:00Z"
+    location: "Room 3"
+    category: WORKSHOP
+    organizer: "John Doe"
+  }) { _id, title }
+}
 ```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Testing
 
-## Install Nx Console
+```bash
+# Unit + Integration tests
+npx nx test api
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+# Con coverage
+npx nx test api --coverage
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# E2E (usa mongodb-memory-server, no requiere BD externa)
+npx jest --config apps/api-e2e/jest.config.cts --forceExit
 
-## Useful links
+# Tests afectados
+npx nx affected --target=test
+```
 
-Learn more:
+### Resumen de Tests
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/intro#learn-nx?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+| Tipo | Ubicación | Tests | Descripción |
+|---|---|---|---|
+| Unit | `apps/api/.../events.service.spec.ts` | 12 | Lógica del servicio, filtros, CRUD, manejo de errores |
+| Integration | `apps/api/.../events.controller.spec.ts` | 8 | Endpoints HTTP con servicio mockeado |
+| E2E | `apps/api-e2e/.../api.spec.ts` | 13 | Flujo completo auth + CRUD con MongoDB in-memory |
+| **Total** | | **33** | |
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## Modelo de Datos
+
+```typescript
+interface Event {
+  _id: string;
+  title: string;           // mín. 3 caracteres
+  description: string;
+  date: Date;
+  location: string;        // ej: "Sala 3", "Virtual"
+  category: 'workshop' | 'meetup' | 'talk' | 'social';
+  organizer: string;
+  status: 'draft' | 'confirmed' | 'cancelled';
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+## Deseables Implementados
+
+| Feature | Estado | Detalle |
+|---|---|---|
+| GraphQL | ✅ | Apollo Server code-first, queries + mutation con JWT guard |
+| Autenticación JWT | ✅ | Register/login, guards globales REST + GraphQL separados, bcrypt |
+| Docker | ✅ | Multi-stage Dockerfiles, docker-compose con MongoDB + API + nginx |
+| Micro-frontend | ✅ | Module Federation vía Rspack/Nx, host + remote independientes |
+| Testing avanzado | ✅ | Unit, integration, E2E con mongodb-memory-server + Supertest (33 tests) |
+| CI/CD | ✅ | GitHub Actions: lint → test (coverage) → e2e → build |
+
+## Calidad y Estructura de Código
+
+### Separación de Responsabilidades
+
+**Backend** — Arquitectura modular NestJS:
+- Cada feature es un módulo autocontenido (`AuthModule`, `EventsModule`) con controller, service, schemas y DTOs.
+- Controllers son "thin" (1-2 líneas por handler) — solo delegan al service. Toda la lógica de negocio está en los services.
+- Guards, decoradores (`@Public()`) y pipes (`ValidationPipe`) son reutilizables y desacoplados de la lógica de negocio.
+- GraphQL resolver reutiliza el mismo `EventsService` que el controller REST — sin duplicación de lógica.
+
+**Frontend** — Componentes por responsabilidad:
+- **UI primitivos** (`components/ui/`): Button, Input, Badge, Select, DatePicker, StatusBadge — componentes genéricos reutilizables.
+- **Feature components** (`components/`): EventList, EventCard, EventForm, EventDetail, EventFilters — cada uno con responsabilidad única.
+- **Hooks** (`hooks/useEvents.ts`): Tres hooks focalizados — `useEvents`, `useEvent`, `useCreateEvent`. Encapsulan data fetching y cache.
+- **Services** (`services/events-api.ts`): Capa de abstracción HTTP pura. Construye requests con auth headers automáticos.
+- **Utilities** (`lib/getCoverUrl.ts`, `lib/utils.ts`): Funciones puras reutilizables extraídas para evitar duplicación.
+
+### Patrones Aplicados
+
+| Patrón | Aplicación |
+|---|---|
+| **Single Responsibility** | Controllers delegan, services contienen lógica, hooks manejan estado, components renderizan |
+| **DRY** | `getCoverUrl` y `StatusBadge` extraídos como utilidades compartidas |
+| **Module encapsulation** | Cada NestJS module exporta solo lo necesario (`JwtAuthGuard`, `EventsService`) |
+| **Presentational vs Container** | `EventFilters` es presentacional puro; `EventList` maneja estado + render |
+| **Custom hooks** | `useEvents` abstrae TanStack Query, los componentes no conocen la implementación del fetching |
+
+### Git Hooks (Husky)
+
+| Hook | Herramienta | Acción |
+|---|---|---|
+| `pre-commit` | **lint-staged** | Ejecuta ESLint (`--fix`) y Prettier (`--write`) solo sobre archivos staged |
+| `commit-msg` | **commitlint** | Valida que el mensaje siga [Conventional Commits](https://www.conventionalcommits.org/) |
+
+**Tipos permitidos**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `infra`, `revert`
+
+**Scopes sugeridos**: `api`, `web`, `shared`, `e2e`
+
+**Ejemplos válidos**:
+```
+feat(api): add event filtering by date range
+fix(web): resolve token persistence after login
+test(e2e): add auth flow integration tests
+docs: update README with setup instructions
+```
+
+## UI/UX
+
+Diseño inspirado en [lu.ma](https://lu.ma) con componentes [shadcn/ui](https://ui.shadcn.com):
+
+- **Paleta**: Tonos neutros cálidos con CSS custom properties (`@theme inline`)
+- **Tipografía**: Inter (Google Fonts)
+- **Componentes**: shadcn/ui — Button, Input, Textarea, Select (Radix), DatePicker (react-day-picker), Badge, Separator, Popover, Calendar, Label
+- **Eventos**: Layout timeline agrupado por fecha (Upcoming/Past)
+- **Formulario**: Layout side-by-side con cover preview auto-generado (picsum.photos)
+- **Detalle**: Dos columnas con imagen, info card sticky, badges semánticos
+- **Auth**: Formularios centrados con card y iconografía
+
+> Para la justificación detallada de cada decisión técnica, ver [TECHNICAL_DECISIONS.md](./TECHNICAL_DECISIONS.md)
+
+## Licencia
+
+MIT
