@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { EventsModule } from '../modules/events/events.module';
+import { AuthModule } from '../modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { EventsModule } from '../modules/events/events.module';
         ),
       }),
     }),
+    AuthModule,
     EventsModule,
   ],
 })
