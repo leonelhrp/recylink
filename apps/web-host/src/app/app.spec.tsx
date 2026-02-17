@@ -14,11 +14,11 @@ describe('App', () => {
   });
 
   it('should display EventBoard branding', () => {
-    const { getByText } = render(
+    const { getAllByText } = render(
       <BrowserRouter>
         <App />
       </BrowserRouter>,
     );
-    expect(getByText('EventBoard')).toBeTruthy();
+    expect(getAllByText('EventBoard').length).toBeGreaterThan(0);
   });
 });
