@@ -5,6 +5,7 @@ import {
   NxModuleFederationDevServerPlugin,
 } from '@nx/module-federation/rspack.js';
 import { ModuleFederationConfig } from '@nx/module-federation';
+import { DefinePlugin } from '@rspack/core';
 import { join } from 'path';
 
 import baseConfig from './module-federation.config';
@@ -43,6 +44,9 @@ export default {
       // Uncomment this line if you don't want to use SVGR
       // See: https://react-svgr.com/
       // svgr: false
+    }),
+    new DefinePlugin({
+      'process.env.NX_API_URL': JSON.stringify(process.env['NX_API_URL'] || ''),
     }),
     new NxModuleFederationPlugin({ config }, { dts: false }),
     new NxModuleFederationDevServerPlugin({ config }),
