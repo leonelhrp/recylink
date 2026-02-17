@@ -6,7 +6,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const globalPrefix = 'api';
-  app.setGlobalPrefix(globalPrefix);
+  app.setGlobalPrefix(globalPrefix, {
+    exclude: ['graphql'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -36,6 +38,7 @@ async function bootstrap() {
   Logger.log(
     `Application is running on: http://localhost:${port}/${globalPrefix}`,
   );
+  Logger.log(`GraphQL Playground: http://localhost:${port}/graphql`);
 }
 
 bootstrap();
