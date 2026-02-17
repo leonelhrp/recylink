@@ -38,6 +38,8 @@ services:
     container_name: eventboard-web
     ports:
       - '80:80'
+    environment:
+      - PORT=80
     depends_on:
       - api
 
