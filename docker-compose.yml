@@ -1,0 +1,45 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: eventboard-mongodb
+    ports:
+      # Use 27018 on host to avoid conflict with local MongoDB on 27017
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: eventboard-api
+    ports:
+      - '3000:3000'
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/event-board
+      - JWT_SECRET=event-board-jwt-secret-key-change-in-production
+      - JWT_EXPIRES_IN=1h
+      - PORT=3000
+      # Allow frontend in dev (4200) and when served by nginx (localhost)
+      - CORS_ORIGIN=http://localhost,http://localhost:4200
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: eventboard-web
+    ports:
+      - '80:80'
+    depends_on:
+      - api
+
+volumes:
+  mongodb_data:
