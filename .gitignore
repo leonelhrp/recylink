@@ -40,3 +40,20 @@ Thumbs.db
 
 .nx/cache
 .nx/workspace-data
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Generated files
+schema.gql
+
+# Cursor
+.cursor/
+
+# Llm files
+.agents
+.agent
+.claude
+CLAUDE.md
