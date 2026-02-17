@@ -1,9 +1,29 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarDays, Compass, Plus, Search, User, LogOut } from 'lucide-react';
+import { CalendarDays, LogOut, Plus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
+
+function useCurrentTime() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const time = now.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const offset = -now.getTimezoneOffset() / 60;
+  const sign = offset >= 0 ? '+' : '';
+  const tz = `GMT${sign}${offset}`;
+
+  return `${time} ${tz}`;
+}
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -11,6 +31,7 @@ export function Navbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const currentTime = useCurrentTime();
 
   const handleLogout = () => {
     setMenuOpen(false);
@@ -28,56 +49,55 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navItems = [
-    { to: '/events', label: 'Events', icon: CalendarDays },
-    { to: '/', label: 'Discover', icon: Compass },
-  ];
+  const navItems = [{ to: '/events', label: 'Events', icon: CalendarDays }];
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex justify-between h-14 items-center">
-          {/* Left: Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center gap-1.5">
+          {/* Left: Logo + Nav */}
+          <div className="flex items-center gap-1">
+            <Link to="/" className="flex items-center gap-1.5 mr-2">
               <div className="w-7 h-7 bg-foreground rounded-lg flex items-center justify-center">
                 <span className="text-background text-xs font-bold">E</span>
               </div>
             </Link>
+            <div className="hidden sm:flex! items-center gap-1">
+              {navItems.map(({ to, label, icon: Icon }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                    location.pathname === to ||
+                      (to === '/events' &&
+                        location.pathname.startsWith('/events'))
+                      ? 'text-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          {/* Center: Nav items */}
-          <div className="hidden sm:flex items-center gap-1">
-            {navItems.map(({ to, label, icon: Icon }) => (
-              <Link
-                key={to}
-                to={to}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
-                  location.pathname === to || (to === '/events' && location.pathname.startsWith('/events'))
-                    ? 'text-foreground font-medium'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </Link>
-            ))}
-          </div>
+          {/* Right: Time + Actions */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground tabular-nums hidden sm:block!">
+              {currentTime}
+            </span>
 
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
                 <Link
                   to="/events/new"
-                  className="text-sm font-medium text-foreground hover:text-foreground/80 transition-colors hidden sm:block"
+                  className="flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
                 >
-                  Create Event
+                  <Plus className="w-4 h-4 sm:hidden!" />
+                  <span className="hidden sm:inline!">Create Event</span>
                 </Link>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Search className="w-4 h-4" />
-                </Button>
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
@@ -89,7 +109,9 @@ export function Navbar() {
                     <div className="absolute right-0 top-full mt-2 w-56 bg-popover border rounded-xl shadow-lg p-1 z-50">
                       <div className="px-3 py-2 border-b mb-1">
                         <p className="text-sm font-medium">{user?.name}</p>
-                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {user?.email}
+                        </p>
                       </div>
                       <button
                         onClick={handleLogout}
@@ -103,11 +125,19 @@ export function Navbar() {
                 </div>
               </>
             ) : (
-              <Link to="/login">
-                <Button variant="ghost" size="sm" className="font-medium">
-                  Sign In
-                </Button>
-              </Link>
+              <>
+                <Link
+                  to="/events"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:flex! items-center gap-1"
+                >
+                  Explore
+                </Link>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="font-medium">
+                    Sign In
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
         </div>
