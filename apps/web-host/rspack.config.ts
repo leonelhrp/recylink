@@ -4,9 +4,16 @@ import {
   NxModuleFederationPlugin,
   NxModuleFederationDevServerPlugin,
 } from '@nx/module-federation/rspack.js';
+import { ModuleFederationConfig } from '@nx/module-federation';
 import { join } from 'path';
 
-import config from './module-federation.config';
+import baseConfig from './module-federation.config';
+
+const isProduction = process.env['NODE_ENV'] === 'production';
+
+const config: ModuleFederationConfig = isProduction
+  ? { ...baseConfig, remotes: [['webEvents', '/webEvents/']] }
+  : baseConfig;
 
 export default {
   output: {
