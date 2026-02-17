@@ -11,8 +11,9 @@ COPY . .
 ARG NX_API_URL
 ENV NX_API_URL=$NX_API_URL
 
-RUN npx nx build webEvents --configuration=production
-RUN npx nx build web-host --configuration=production
+RUN npx nx reset
+RUN npx nx build webEvents --configuration=production --skip-nx-cache
+RUN npx nx build web-host --configuration=production --skip-nx-cache
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine AS runner
