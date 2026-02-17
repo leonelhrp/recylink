@@ -17,6 +17,10 @@ const config: ModuleFederationConfig = isProduction
   : baseConfig;
 
 export default {
+  ignoreWarnings: [
+    (warning: { message: string; module?: { resource?: string } }) =>
+      warning.module?.resource?.includes('@module-federation') ?? false,
+  ],
   output: {
     path: join(__dirname, '../../dist/apps/web-host'),
     publicPath: 'auto',
